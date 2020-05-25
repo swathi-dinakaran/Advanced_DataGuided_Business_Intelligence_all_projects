@@ -1,0 +1,39 @@
+def modelEval(model, dataset):
+    # All artists in the 'userArtistData' dataset
+    # YOUR CODE GOES HERE
+    allArtists=userArtistData.map(lambda x: x[1]).distinct().collect()
+
+    # Set of all users in the current (Validation/Testing) dataset
+    # YOUR CODE GOES HERE
+    
+#    allUsers=validationData.map(lambda x: x[0]).distinct().collect()
+    allUsers=dataset.map(lambda x: x[0]).distinct().collect()
+    
+    # Create a dictionary of (key, values) for current (Validation/Testing) dataset
+    # YOUR CODE GOES HERE
+    
+#    datasetDict=validationData.map(lambda x:(x[0],[x[1]])).reduceByKey(lambda a, b: a + b).collectAsMap()
+    datasetDict=dataset.map(lambda x:(x[0],[x[1]])).distinct().reduceByKey(lambda a, b: a + b).collectAsMap()
+    
+    # Create a dictionary of (key, values) for training dataset
+    # YOUR CODE GOES HERE
+    trainDict=trainData.map(lambda x:(x[0],[x[1]])).reduceByKey(lambda a, b: a + b).collectAsMap()
+    # For each user, calculate the prediction score i.e. similarity between predicted and actual artists
+    totalScore=0;
+    # YOUR CODE GOES HERE
+    for user in allUsers:
+        predicted_artists=datasetDict.get(user)
+        TrainArtists= trainDict.get(user)
+        FinalArtists=set(predicted_artists)-set(TrainArtists)
+        numberPredicted= len(FinalArtists)
+        result_predicted=sc.parallelize([(user,finalart) for finalart in FinalArtists])
+        result_test=model.predictAll(result_predicted)
+        ordered_result_test= result_test.sortBy(lambda x: x[2],ascending=False)
+        ordered_result_artists=ordered_result_test.map(lambda row:row[1]).take(numberPredicted)
+        correct_predictions= FinalArtists.intersection(ordered_result_artists)        
+        score=(len(correct_predictions)/numberPredicted)
+        print(score)
+        totalScore+=score
+    # Print average score of the model for all users for the specified rank
+    # YOUR CODE GOES HERE
+    print('total score'+totalScore/len(allUsers))
